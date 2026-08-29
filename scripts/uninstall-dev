@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+plugin_id="io.github.nofatetech.studio-control"
+plugin_target="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/$plugin_id"
+
+if [[ -L "$plugin_target" ]]; then
+  unlink "$plugin_target"
+fi
+
+printf 'Removed Studio Control development plugin symlink.\n'
+printf 'Remove %s from the bar through Omarchy bar settings if desired.\n' "$plugin_id"
+

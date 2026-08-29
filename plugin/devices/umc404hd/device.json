@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "behringer.umc404hd",
+  "name": "Behringer UMC404HD",
+  "shortName": "UMC404HD",
+  "kind": "audio-interface",
+  "panel": "DevicePanel.qml",
+  "match": {
+    "usb": [
+      { "vendorId": "1397", "productId": "0509" }
+    ]
+  },
+  "capabilities": [
+    "audio.capture.4",
+    "audio.playback.4",
+    "midi.input",
+    "midi.output"
+  ]
+}
+

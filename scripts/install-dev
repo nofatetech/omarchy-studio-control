@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+plugin_id="io.github.nofatetech.studio-control"
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+plugin_source="$repo_root/plugin"
+plugin_target="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/$plugin_id"
+
+mkdir -p "$(dirname -- "$plugin_target")"
+
+if [[ -e "$plugin_target" && ! -L "$plugin_target" ]]; then
+  printf 'Refusing to replace non-symlink plugin directory: %s\n' "$plugin_target" >&2
+  exit 1
+fi
+
+ln -sfn "$plugin_source" "$plugin_target"
+omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+omarchy bar put "$plugin_id" --section right
+
+printf 'Studio Control development plugin installed from:\n  %s\n' "$plugin_source"
+printf 'Edits under plugin/ now hot-reload in Omarchy shell.\n'

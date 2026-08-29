@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "novation.launchpad-original",
+  "name": "Novation Launchpad",
+  "shortName": "Launchpad",
+  "kind": "midi-controller",
+  "panel": "DevicePanel.qml",
+  "match": {
+    "usb": [
+      { "vendorId": "1235", "productId": "000e" }
+    ]
+  },
+  "capabilities": [
+    "midi.input",
+    "midi.output",
+    "led.red-green-amber",
+    "grid.8x8"
+  ]
+}
+

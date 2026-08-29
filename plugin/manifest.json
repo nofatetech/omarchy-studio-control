@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.nofatetech.studio-control",
+  "name": "Studio Control",
+  "version": "0.1.0",
+  "author": "nofatetech",
+  "license": "MIT",
+  "description": "A modular hardware surface for studio devices in the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Studio Control",
+    "description": "Open realistic panels for connected audio, MIDI, and studio hardware.",
+    "category": "Audio",
+    "aliases": ["studio", "midi", "audio", "hardware"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalMs": 2500,
+      "showDisconnected": true
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalMs",
+        "type": "integer",
+        "label": "Device refresh interval (ms)",
+        "min": 1000,
+        "max": 30000,
+        "step": 500,
+        "defaultValue": 2500
+      },
+      {
+        "key": "showDisconnected",
+        "type": "boolean",
+        "label": "Show disconnected registered devices",
+        "defaultValue": true
+      }
+    ]
+  }
+}
+
