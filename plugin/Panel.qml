@@ -17,6 +17,9 @@ Panel {
   property bool observerOnline: false
   property string observerError: ""
   property string discoveryError: ""
+  property string actionError: ""
+  property var actionQueue: []
+  property var currentAction: null
 
   readonly property var devices: Array.isArray(deviceSnapshot.devices) ? deviceSnapshot.devices : []
   readonly property int connectedCount: Number(deviceSnapshot.connectedCount || 0)
@@ -84,6 +87,8 @@ Panel {
       result.accessMode = observed.accessMode || "observe"
       result.midiConnected = observed.midiConnected === true
       result.midiPort = observed.midiPort || ""
+      result.midiPeers = observed.midiPeers || ({})
+      result.surface = observed.surface || null
       result.observerOnline = observerOnline
     }
     return result
@@ -106,7 +111,7 @@ Panel {
         var current = Object.assign({}, next[message.event.deviceId] || ({}))
         current.activity = message.activity || ({})
         current.midiConnected = true
-        current.accessMode = "observe"
+        if (!current.accessMode) current.accessMode = "observe"
         next[message.event.deviceId] = current
         observerDevices = next
         observerOnline = true
@@ -121,6 +126,24 @@ Panel {
   function connectionColor(device) {
     if (device && device.error) return "#e6a441"
     return device && device.connected ? "#52e881" : "#ec5d62"
+  }
+
+  function sendDeviceAction(deviceId, action, payload) {
+    actionQueue = actionQueue.concat([{
+      "deviceId": deviceId,
+      "action": action,
+      "payload": payload || ({})
+    }])
+    runNextAction()
+  }
+
+  function runNextAction() {
+    if (actionProcess.running || actionQueue.length === 0) return
+    currentAction = actionQueue[0]
+    actionError = ""
+    actionProcess.command = [studioctlCommand, "command", currentAction.deviceId,
+                             currentAction.action, JSON.stringify(currentAction.payload)]
+    actionProcess.running = true
   }
 
   Component.onCompleted: refreshDevices()
@@ -146,6 +169,36 @@ Panel {
     stderr: StdioCollector {
       waitForEnd: true
       onStreamFinished: if (text.trim() !== "") root.discoveryError = text.trim()
+    }
+  }
+
+  Process {
+    id: actionProcess
+    running: false
+
+    stdout: SplitParser {
+      onRead: function(line) {
+        try {
+          var response = JSON.parse(String(line || "").trim())
+          if (response.type === "command_result" && response.ok !== true)
+            root.actionError = response.message || "Device command failed"
+        } catch (error) {
+          root.actionError = "Device command response error: " + error
+        }
+      }
+    }
+
+    stderr: SplitParser {
+      onRead: function(line) {
+        var message = String(line || "").trim()
+        if (message !== "") root.actionError = message
+      }
+    }
+
+    onExited: function() {
+      root.actionQueue = root.actionQueue.slice(1)
+      root.currentAction = null
+      Qt.callLater(root.runNextAction)
     }
   }
 
@@ -321,7 +374,7 @@ Panel {
         }
 
         BorderSurface {
-          visible: root.discoveryError !== ""
+          visible: root.discoveryError !== "" || root.actionError !== ""
           width: parent.width
           implicitHeight: errorText.implicitHeight + Style.space(20)
           color: Qt.rgba(0.88, 0.32, 0.35, 0.08)
@@ -334,7 +387,7 @@ Panel {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.margins: Style.space(10)
-            text: root.discoveryError
+            text: root.actionError !== "" ? root.actionError : root.discoveryError
             color: "#e98b8e"
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
@@ -367,6 +420,10 @@ Panel {
                 onLoaded: {
                   if (!item) return
                   item.deviceState = enrichedState
+                  var deviceId = modelData.id
+                  item.actionRequested.connect(function(action, payload) {
+                    root.sendDeviceAction(deviceId, action, payload)
+                  })
                 }
 
                 onEnrichedStateChanged: if (item) item.deviceState = enrichedState

@@ -22,12 +22,14 @@ added incrementally behind the same device-module contract.
 - Live USB discovery without fixed ALSA card numbers
 - Realistic Launchpad and UMC404HD device faces
 - Live Casio keyboard, Launchpad pad, and UMC MIDI activity
-- Interactive Launchpad color preview
+- Launchpad ALSA peer/conflict visibility and live button feedback
+- Explicit Launchpad managed mode with LED painting and scrolling text
 - Horizontally scalable studio surface for additional hardware
 - Per-device access policy with harmless `observe` as the default
 
-The current daemon milestone observes MIDI input through cooperative ALSA
-sequencer subscriptions. Launchpad LED feedback, PipeWire controls, recording,
+The daemon observes MIDI input through cooperative ALSA sequencer subscriptions.
+The original Launchpad can additionally enter an explicit managed mode for LED
+output; observe-only remains the startup default. PipeWire controls, recording,
 and Home Assistant integration remain planned. See
 [the product and technical specification](docs/SPEC.md) for the module contract
 and roadmap, and [the integration architecture](docs/INTEGRATIONS.md) for the
@@ -74,7 +76,7 @@ The installer symlinks `plugin/` into the user Omarchy plugin directory and
 adds `io.github.nofatetech.studio-control` to the right side of the bar. Source
 edits then hot-reload through Omarchy shell.
 
-Build and start the passive observer:
+Build and start the local daemon:
 
 ```bash
 ./scripts/install-daemon-dev
@@ -82,9 +84,22 @@ studioctl status | python3 -m json.tool
 ```
 
 The daemon runs as a user service and exposes a mode-`0600` Unix socket beneath
-`$XDG_RUNTIME_DIR/studio-control/`. It only creates cooperative ALSA MIDI input
-subscriptions. It does not expose a MIDI output port, open an audio capture
-stream, change PipeWire defaults, or claim a device exclusively.
+`$XDG_RUNTIME_DIR/studio-control/`. It starts with only cooperative ALSA MIDI
+input subscriptions. Launchpad LED output is opened only after the user selects
+**Manage LEDs**, and is closed/cleared by **Release**. It never opens an audio
+capture stream, changes PipeWire defaults, or claims a device exclusively.
+
+The same actions are available for testing from the terminal:
+
+```bash
+studioctl command novation.launchpad-original set_mode '{"mode":"managed"}'
+studioctl command novation.launchpad-original scroll '{"text":"STUDIO","color":3}'
+studioctl command novation.launchpad-original set_mode '{"mode":"observe"}'
+```
+
+Managed mode refuses to start if another ALSA sequencer client is already
+sending to the Launchpad. ALSA peer discovery cannot identify applications
+that bypass the sequencer and open the raw MIDI device directly.
 
 No files under `/usr/share/omarchy` are modified.
 

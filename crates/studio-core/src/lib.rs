@@ -4,9 +4,9 @@ use std::env;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const PROTOCOL_VERSION: u32 = 2;
+pub const PROTOCOL_VERSION: u32 = 3;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AccessMode {
     Released,
@@ -34,11 +34,36 @@ pub struct MidiEvent {
 #[serde(rename_all = "camelCase")]
 pub struct MidiActivity {
     pub active_notes: Vec<u8>,
+    pub active_controls: Vec<u8>,
     pub sustain: bool,
     pub event_count: u64,
     pub last_event: Option<MidiEvent>,
     pub chord: Option<String>,
     pub last_chord: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MidiPeer {
+    pub client_id: u8,
+    pub port_id: u8,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MidiPeers {
+    pub input_consumers: Vec<MidiPeer>,
+    pub output_producers: Vec<MidiPeer>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GridSurfaceState {
+    pub rows: u8,
+    pub columns: u8,
+    pub cells: Vec<u8>,
+    pub animation: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -49,7 +74,9 @@ pub struct DeviceState {
     pub access_mode: AccessMode,
     pub midi_connected: bool,
     pub midi_port: Option<String>,
+    pub midi_peers: MidiPeers,
     pub activity: MidiActivity,
+    pub surface: Option<GridSurfaceState>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -73,11 +100,19 @@ pub enum ServerMessage {
     Error {
         message: String,
     },
+    CommandResult {
+        ok: bool,
+        message: String,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ClientCommand {
     pub command: String,
+    pub device_id: Option<String>,
+    pub action: Option<String>,
+    pub payload: Option<serde_json::Value>,
 }
 
 pub fn now_ms() -> u64 {

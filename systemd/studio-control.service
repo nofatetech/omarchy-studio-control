@@ -1,5 +1,5 @@
 [Unit]
-Description=Studio Control passive hardware observer
+Description=Studio Control hardware observer and managed-device daemon
 Documentation=https://github.com/nofatetech/omarchy-studio-control
 After=graphical-session.target sound.target
 

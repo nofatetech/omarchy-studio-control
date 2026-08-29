@@ -29,5 +29,5 @@ systemctl --user daemon-reload
 systemctl --user enable studio-control.service
 systemctl --user restart studio-control.service
 
-printf 'Studio Control observer installed and started.\n'
+printf 'Studio Control daemon installed and started.\n'
 printf 'Inspect it with: studioctl status\n'

@@ -86,6 +86,24 @@ professional-studio schema that covers MIDI devices, DAWs, lighting, system
 audio, and room sensors. The small versioned envelope above is the intentional
 local normalization layer.
 
+## MIDI ownership and Launchpad policy
+
+ALSA sequencer subscriptions are directional. Studio Control reports external
+clients receiving events from a hardware port as `inputConsumers`, and clients
+sending events to it as `outputProducers`. Multiple input consumers can safely
+observe the same Launchpad button events. Competing output producers can fight
+over its LEDs, so managed mode is rejected when one is visible.
+
+This is cooperative ownership, not a lock: applications using Linux raw MIDI
+directly do not appear in the ALSA sequencer graph. Studio Control never
+disconnects peers in managed mode. A future exclusive mode must identify and
+confirm affected clients before changing subscriptions.
+
+The original Launchpad uses MIDI 1.0 note messages for the 8×8 grid and side
+buttons, CC 104–111 for its top row, and a four-color red/green LED palette.
+Animation sends only changed cells at a bounded cadence to stay comfortably
+below the device's documented update ceiling.
+
 ## Output Analyzer and System EQ
 
 These are separate modules because their safety properties differ.

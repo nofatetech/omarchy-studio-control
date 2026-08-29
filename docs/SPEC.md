@@ -1,6 +1,6 @@
 # Omarchy Studio Control — product and technical specification
 
-Status: passive observation milestone
+Status: Launchpad managed-canvas milestone
 
 ## Product intent
 
@@ -61,12 +61,17 @@ for the passive milestone.
 - Horizontal device canvas that can grow and scroll as modules are added.
 - Realistic Launchpad, UMC404HD, and Casio keyboard faces.
 - Live USB connected/disconnected state refreshed without restarting shell.
-- Launchpad pads provide local visual interaction for immediate UI testing.
+- Launchpad pads mirror live button presses and provide local color preview in
+  observe mode.
+- Launchpad managed mode paints the physical LED grid, cycles colors from
+  hardware or screen presses, and scrolls user-entered text.
+- ALSA sequencer input consumers and LED output producers are shown separately;
+  managed LED mode refuses a known output conflict.
 - UMC404HD physical controls are visibly marked as hardware-only.
 
 ### Explicitly deferred
 
-- MIDI ownership, pad mappings, and LED output.
+- Persistent Launchpad mappings/profiles and exclusive device takeover.
 - PipeWire routing, level metering, and recording.
 - Persistent profiles and mapping editor.
 - Home Assistant API bridge.
@@ -114,8 +119,9 @@ property var deviceState
 signal actionRequested(string action, var payload)
 ```
 
-The shell will eventually route `actionRequested` to a user daemon. For the
-visual MVP, device panels keep only harmless preview state locally.
+The shell routes `actionRequested` through `studioctl` to the user daemon. Each
+command produces a structured success/error reply. Observe-mode visual previews
+remain local and never write hardware.
 
 ## Runtime architecture
 
@@ -144,9 +150,7 @@ Omarchy shell plugin ── JSON IPC ── studio-control user daemon
 The QML shell remains presentation-only. Long-running MIDI and audio work must
 not run in the shared Omarchy shell process.
 
-### Passive observation milestone
-
-The first daemon implementation is intentionally one-way:
+### Observe and managed-device flow
 
 ```text
 ALSA MIDI source ── non-exclusive subscription ── Rust daemon
@@ -154,10 +158,14 @@ ALSA MIDI source ── non-exclusive subscription ── Rust daemon
                                       Unix socket JSON stream
                                                     │
                                              Omarchy panel
+
+Omarchy panel ── acknowledged command ── Rust daemon ── MIDI LED output
+                                                    (managed mode only)
 ```
 
-The daemon does not open MIDI output ports, alter ALSA subscriptions belonging
-to other clients, change PipeWire metadata, or open UMC audio capture streams.
+The daemon does not open MIDI output at startup, alter ALSA subscriptions
+belonging to other clients, change PipeWire metadata, or open UMC audio capture
+streams. Launchpad output opens only in managed mode and closes on release.
 
 ## Initial control roadmap
 
@@ -168,8 +176,8 @@ to other clients, change PipeWire metadata, or open UMC audio capture streams.
    reduced meters, spectrum, waveform, and loudness frames.
 4. **REAPER observe adapter:** publish project, transport, record-arm, and
    recording-safety state through the shared adapter contract.
-5. **Launchpad managed mode:** LED renderer, explicit release/control mode, and
-   profiles.
+5. **Launchpad managed mode:** explicit release/control mode, LED renderer,
+   button mirroring, and text canvas. ✓ (profiles remain)
 6. **UMC404HD:** default input/output, digital mute/volume, meters, recording.
 7. **System EQ:** explicit managed PipeWire filter-chain/LV2 mode with
    reversible routing.
