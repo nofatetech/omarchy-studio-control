@@ -12,6 +12,10 @@ Panel {
 
   property var settings: ({})
   property var deviceSnapshot: ({ "devices": [], "connectedCount": 0, "registeredCount": 0 })
+  property var observerDevices: ({})
+  property int activityRevision: 0
+  property bool observerOnline: false
+  property string observerError: ""
   property string discoveryError: ""
 
   readonly property var devices: Array.isArray(deviceSnapshot.devices) ? deviceSnapshot.devices : []
@@ -21,6 +25,7 @@ Panel {
   readonly property bool showDisconnected: setting("showDisconnected", true) !== false
   readonly property string pluginDirectory: localPath(Qt.resolvedUrl("."))
   readonly property string statusCommand: pluginDirectory + "/scripts/device-status"
+  readonly property string studioctlCommand: Quickshell.env("HOME") + "/.local/bin/studioctl"
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property color dim: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.55)
   readonly property color accent: Color.accent
@@ -70,6 +75,49 @@ Panel {
     if (!statusProcess.running) statusProcess.running = true
   }
 
+  function enrichedDeviceState(device, revision) {
+    if (!device) return ({})
+    var result = Object.assign({}, device)
+    var observed = observerDevices && device.id ? observerDevices[device.id] : null
+    if (observed) {
+      result.activity = observed.activity || ({})
+      result.accessMode = observed.accessMode || "observe"
+      result.midiConnected = observed.midiConnected === true
+      result.midiPort = observed.midiPort || ""
+      result.observerOnline = observerOnline
+    }
+    return result
+  }
+
+  function applyObserverMessage(line) {
+    var text = String(line || "").trim()
+    if (text === "") return
+    try {
+      var message = JSON.parse(text)
+      if (message.type === "snapshot" && message.snapshot && message.snapshot.devices) {
+        observerDevices = message.snapshot.devices
+        observerOnline = true
+        observerError = ""
+        activityRevision++
+        return
+      }
+      if (message.type === "midi_event" && message.event && message.event.deviceId) {
+        var next = Object.assign({}, observerDevices)
+        var current = Object.assign({}, next[message.event.deviceId] || ({}))
+        current.activity = message.activity || ({})
+        current.midiConnected = true
+        current.accessMode = "observe"
+        next[message.event.deviceId] = current
+        observerDevices = next
+        observerOnline = true
+        observerError = ""
+        activityRevision++
+      }
+    } catch (error) {
+      observerError = "Observer data error: " + error
+    }
+  }
+
   function connectionColor(device) {
     if (device && device.error) return "#e6a441"
     return device && device.connected ? "#52e881" : "#ec5d62"
@@ -99,6 +147,36 @@ Panel {
       waitForEnd: true
       onStreamFinished: if (text.trim() !== "") root.discoveryError = text.trim()
     }
+  }
+
+  Process {
+    id: observerProcess
+    command: [root.studioctlCommand, "watch"]
+    running: true
+
+    stdout: SplitParser {
+      onRead: function(line) { root.applyObserverMessage(line) }
+    }
+
+    stderr: SplitParser {
+      onRead: function(line) {
+        var message = String(line || "").trim()
+        if (message !== "") root.observerError = message
+      }
+    }
+
+    onExited: function(exitCode) {
+      root.observerOnline = false
+      if (root.observerError === "") root.observerError = "Observer offline (" + exitCode + ")"
+      observerRetry.restart()
+    }
+  }
+
+  Timer {
+    id: observerRetry
+    interval: 2000
+    repeat: false
+    onTriggered: if (!observerProcess.running) observerProcess.running = true
   }
 
   Item {
@@ -183,7 +261,7 @@ Panel {
             }
 
             Text {
-              text: root.connectedCount + " connected · " + root.registeredCount + " registered device modules"
+              text: root.connectedCount + " connected · " + root.registeredCount + " modules · observer " + (root.observerOnline ? "live" : "offline")
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -283,12 +361,15 @@ Panel {
 
               Loader {
                 required property var modelData
+                property var enrichedState: root.enrichedDeviceState(modelData, root.activityRevision)
                 source: "file://" + modelData.panel
 
                 onLoaded: {
                   if (!item) return
-                  item.deviceState = modelData
+                  item.deviceState = enrichedState
                 }
+
+                onEnrichedStateChanged: if (item) item.deviceState = enrichedState
               }
             }
           }

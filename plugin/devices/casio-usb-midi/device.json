@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "id": "behringer.umc404hd",
-  "name": "Behringer UMC404HD",
-  "shortName": "UMC404HD",
-  "kind": "audio-interface",
+  "id": "casio.usb-midi",
+  "name": "Casio USB-MIDI Keyboard",
+  "shortName": "Casio",
+  "kind": "midi-keyboard",
   "panel": "DevicePanel.qml",
   "match": {
     "usb": [
-      { "vendorId": "1397", "productId": "0509" }
+      { "vendorId": "07cf", "productId": "6803" }
     ]
   },
   "access": {
@@ -15,9 +15,9 @@
     "supportedModes": ["released", "observe", "managed"]
   },
   "capabilities": [
-    "audio.capture.4",
-    "audio.playback.4",
     "midi.input",
-    "midi.output"
+    "midi.output",
+    "keyboard.velocity",
+    "pedal.sustain"
   ]
 }

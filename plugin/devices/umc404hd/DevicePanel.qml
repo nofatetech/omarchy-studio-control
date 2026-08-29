@@ -11,6 +11,9 @@ Studio.DeviceFrame {
   accentColor: "#70b9e9"
   implicitWidth: 530
 
+  readonly property var activity: deviceState && deviceState.activity ? deviceState.activity : ({})
+  readonly property var lastEvent: activity.lastEvent || ({})
+
   Item {
     width: parent.width
     implicitHeight: 420
@@ -243,11 +246,35 @@ Studio.DeviceFrame {
         anchors.left: parent.left
         anchors.leftMargin: 14
         anchors.verticalCenter: parent.verticalCenter
-        width: parent.width - 28
-        text: "Physical knobs and switches are shown for orientation. Their positions are not available over USB."
+        width: parent.width - 120
+        text: root.lastEvent.kind
+          ? "MIDI " + String(root.lastEvent.kind).replace("_", " ").toUpperCase() + " · " + Number(root.activity.eventCount || 0) + " observed events"
+          : "Physical knob/switch positions are not exposed over USB. MIDI is observed without taking ownership."
         color: "#808a8f"
         font.pixelSize: 8
         wrapMode: Text.WordWrap
+      }
+
+      Row {
+        anchors.right: parent.right
+        anchors.rightMargin: 14
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 6
+
+        Studio.StatusLed {
+          anchors.verticalCenter: parent.verticalCenter
+          ledColor: "#70b9e9"
+          lit: root.lastEvent.kind !== undefined
+          diameter: 7
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          text: "MIDI OBSERVE"
+          color: "#64747c"
+          font.pixelSize: 7
+          font.weight: Font.DemiBold
+        }
       }
     }
   }

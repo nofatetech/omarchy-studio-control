@@ -19,3 +19,4 @@ omarchy bar put "$plugin_id" --section right
 
 printf 'Studio Control development plugin installed from:\n  %s\n' "$plugin_source"
 printf 'Edits under plugin/ now hot-reload in Omarchy shell.\n'
+printf 'Run ./scripts/install-daemon-dev to build and start live MIDI observation.\n'

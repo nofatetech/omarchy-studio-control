@@ -1,6 +1,6 @@
 # Omarchy Studio Control — product and technical specification
 
-Status: MVP visual shell
+Status: passive observation milestone
 
 ## Product intent
 
@@ -10,9 +10,9 @@ workspace containing a distinct, recognizable panel for every registered
 piece of hardware. Each panel owns its appearance, status, capabilities, and
 actions.
 
-The initial hardware happens to be a Novation Launchpad and Behringer
-UMC404HD. Neither receives special architectural status: future devices are
-added as modules.
+The initial hardware happens to be a Novation Launchpad, Behringer UMC404HD,
+and Casio USB-MIDI keyboard. None receives special architectural status:
+future devices are added as modules.
 
 ## Experience principles
 
@@ -28,6 +28,24 @@ added as modules.
    studio shell.
 6. **Local by default.** Core MIDI/audio control works without an internet
    service. Home Assistant is an optional device/integration module later.
+7. **Observation is harmless.** A newly discovered device is never written to,
+   rerouted, or claimed exclusively without an explicit mode change.
+
+## Device access modes
+
+Every module declares a default and supported access modes. The daemon applies
+the mode per physical device rather than globally.
+
+| Mode | Behaviour |
+|---|---|
+| `released` | Studio Control opens no port and receives no events. |
+| `observe` | Non-exclusive input subscription and read-only system state. No output or routing changes. This is the default. |
+| `managed` | Enables deliberate output and control actions while remaining cooperative with other applications. |
+| `exclusive` | Optional future mode that may disconnect or block other clients. It must always require confirmation. |
+
+MIDI observation uses ALSA sequencer subscriptions, allowing DAWs and other
+clients to receive the same events concurrently. Raw MIDI ownership is not used
+for the passive milestone.
 
 ## MVP scope
 
@@ -41,7 +59,7 @@ added as modules.
 
 - Header with registered and connected counts.
 - Horizontal device canvas that can grow and scroll as modules are added.
-- Realistic Launchpad and UMC404HD faces.
+- Realistic Launchpad, UMC404HD, and Casio keyboard faces.
 - Live USB connected/disconnected state refreshed without restarting shell.
 - Launchpad pads provide local visual interaction for immediate UI testing.
 - UMC404HD physical controls are visibly marked as hardware-only.
@@ -76,6 +94,10 @@ DevicePanel.qml
     "usb": [
       { "vendorId": "1234", "productId": "abcd" }
     ]
+  },
+  "access": {
+    "defaultMode": "observe",
+    "supportedModes": ["released", "observe", "managed"]
   },
   "capabilities": ["midi.input", "midi.output"]
 }
@@ -122,11 +144,28 @@ Omarchy shell plugin ── JSON IPC ── studio-control user daemon
 The QML shell remains presentation-only. Long-running MIDI and audio work must
 not run in the shared Omarchy shell process.
 
+### Passive observation milestone
+
+The first daemon implementation is intentionally one-way:
+
+```text
+ALSA MIDI source ── non-exclusive subscription ── Rust daemon
+                                                    │
+                                      Unix socket JSON stream
+                                                    │
+                                             Omarchy panel
+```
+
+The daemon does not open MIDI output ports, alter ALSA subscriptions belonging
+to other clients, change PipeWire metadata, or open UMC audio capture streams.
+
 ## Initial control roadmap
 
-1. **Visual shell:** module discovery, live connectivity, realistic faces.
-2. **Daemon and IPC:** stable state/actions, logging, reconnect behavior.
-3. **Launchpad:** input events, LED renderer, controller release mode, profiles.
+1. **Visual shell:** module discovery, live connectivity, realistic faces. ✓
+2. **Passive daemon and IPC:** cooperative MIDI observation, live UI activity,
+   logging, and reconnect behaviour. ✓
+3. **Launchpad managed mode:** LED renderer, explicit release/control mode, and
+   profiles.
 4. **UMC404HD:** default input/output, digital mute/volume, meters, recording.
 5. **Assignments:** bind Launchpad controls to daemon actions and reflect state
    on both the hardware LEDs and QML face.
@@ -142,3 +181,6 @@ cannot truthfully mirror or actuate them.
 The original Launchpad is a MIDI controller with red/green/amber LED feedback;
 it is not an audio device and its pads are not velocity-sensitive.
 
+The connected Casio identifies itself generically as `CASIO USB-MIDI`
+(`07cf:6803`), so its module represents the observed USB-MIDI keyboard rather
+than claiming a specific retail keyboard model.

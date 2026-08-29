@@ -1,0 +1,14 @@
+[Unit]
+Description=Studio Control passive hardware observer
+Documentation=https://github.com/nofatetech/omarchy-studio-control
+After=graphical-session.target sound.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/studio-control-daemon
+Restart=on-failure
+RestartSec=2
+UMask=0077
+
+[Install]
+WantedBy=default.target

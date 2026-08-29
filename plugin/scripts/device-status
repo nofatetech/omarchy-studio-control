@@ -79,6 +79,10 @@ def load_modules(inventory: list[dict[str, str]]) -> list[dict[str, object]]:
                 "connected": matched_device is not None,
                 "panel": str((manifest_path.parent / panel_name).resolve()),
                 "capabilities": manifest.get("capabilities", []),
+                "access": manifest.get(
+                    "access",
+                    {"defaultMode": "observe", "supportedModes": ["released", "observe"]},
+                ),
                 "usb": matched_device,
                 "error": "",
             }
@@ -104,4 +108,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

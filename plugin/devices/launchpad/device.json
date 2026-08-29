@@ -10,6 +10,10 @@
       { "vendorId": "1235", "productId": "000e" }
     ]
   },
+  "access": {
+    "defaultMode": "observe",
+    "supportedModes": ["released", "observe", "managed"]
+  },
   "capabilities": [
     "midi.input",
     "midi.output",
@@ -17,4 +21,3 @@
     "grid.8x8"
   ]
 }
-

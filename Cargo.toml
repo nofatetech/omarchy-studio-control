@@ -1,0 +1,19 @@
+[workspace]
+members = [
+  "crates/studio-core",
+  "crates/studio-daemon",
+  "crates/studioctl"
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+license = "MIT"
+authors = ["nofatetech"]
+
+[workspace.dependencies]
+anyhow = "1.0.104"
+midir = "0.11.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"

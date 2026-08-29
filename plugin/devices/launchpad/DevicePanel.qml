@@ -12,10 +12,15 @@ Studio.DeviceFrame {
   implicitWidth: 416
 
   property var padColors: ({})
+  readonly property var activity: deviceState && deviceState.activity ? deviceState.activity : ({})
+  readonly property var activeNotes: Array.isArray(activity.activeNotes) ? activity.activeNotes : []
+  readonly property var lastEvent: activity.lastEvent || ({})
 
   function padKey(row, column) { return row + ":" + column }
 
   function padColor(row, column) {
+    var midiNote = (7 - row) * 16 + column
+    if (activeNotes.indexOf(midiNote) >= 0) return "#55d97c"
     var colorIndex = Number(padColors[padKey(row, column)] || 0)
     if (colorIndex === 1) return "#53dc78"
     if (colorIndex === 2) return "#ef5057"
@@ -183,7 +188,9 @@ Studio.DeviceFrame {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 12
         anchors.horizontalCenter: parent.horizontalCenter
-        text: "Click pads to preview the original red · green · amber palette"
+        text: root.lastEvent.kind
+          ? "LIVE " + String(root.lastEvent.kind).replace("_", " ").toUpperCase() + " · note " + root.lastEvent.note + " · velocity " + root.lastEvent.velocity
+          : "Observe mode · click pads to preview the red · green · amber palette"
         color: "#667075"
         font.pixelSize: 7
       }

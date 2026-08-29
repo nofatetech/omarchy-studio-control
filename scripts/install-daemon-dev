@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+binary_dir="${HOME}/.local/bin"
+user_unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+unit_source="$repo_root/systemd/studio-control.service"
+unit_target="$user_unit_dir/studio-control.service"
+
+cargo build --manifest-path "$repo_root/Cargo.toml" --release
+mkdir -p "$binary_dir" "$user_unit_dir"
+
+for binary in studio-control-daemon studioctl; do
+  target="$binary_dir/$binary"
+  if [[ -e "$target" && ! -L "$target" ]]; then
+    printf 'Refusing to replace non-symlink binary: %s\n' "$target" >&2
+    exit 1
+  fi
+  ln -sfn "$repo_root/target/release/$binary" "$target"
+done
+
+if [[ -e "$unit_target" && ! -L "$unit_target" ]]; then
+  printf 'Refusing to replace non-symlink user unit: %s\n' "$unit_target" >&2
+  exit 1
+fi
+
+ln -sfn "$unit_source" "$unit_target"
+systemctl --user daemon-reload
+systemctl --user enable --now studio-control.service
+
+printf 'Studio Control observer installed and started.\n'
+printf 'Inspect it with: studioctl status\n'
