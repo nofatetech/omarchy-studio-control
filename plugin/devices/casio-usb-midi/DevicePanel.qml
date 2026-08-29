@@ -7,14 +7,16 @@ Studio.DeviceFrame {
   signal actionRequested(string action, var payload)
 
   title: deviceState && deviceState.name ? deviceState.name : "Casio USB-MIDI Keyboard"
-  subtitle: "velocity-sensitive MIDI keyboard"
+  subtitle: "61-key velocity-sensitive MIDI keyboard"
   accentColor: "#62b6e7"
-  implicitWidth: 620
+  implicitWidth: 760
 
   readonly property var activity: deviceState && deviceState.activity ? deviceState.activity : ({})
   readonly property var activeNotes: Array.isArray(activity.activeNotes) ? activity.activeNotes : []
   readonly property var lastEvent: activity.lastEvent || ({})
   readonly property bool sustain: activity.sustain === true
+  readonly property string chord: activity.chord || ""
+  readonly property string displayedChord: chord || activity.lastChord || "—"
 
   function whiteNote(index) {
     var offsets = [0, 2, 4, 5, 7, 9, 11]
@@ -44,7 +46,7 @@ Studio.DeviceFrame {
     Rectangle {
       id: keyboardBody
       anchors.horizontalCenter: parent.horizontalCenter
-      width: 580
+      width: 720
       height: 262
       radius: 10
       color: "#202426"
@@ -135,6 +137,34 @@ Studio.DeviceFrame {
         }
 
         Rectangle {
+          width: 128
+          height: 48
+          radius: 5
+          color: root.chord !== "" ? "#182935" : "#141719"
+          border.width: 1
+          border.color: root.chord !== "" ? "#356781" : "#343a3d"
+
+          Column {
+            anchors.centerIn: parent
+            spacing: 2
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: root.displayedChord
+              color: root.chord !== "" ? "#8bd4f5" : "#8a969b"
+              font.pixelSize: 17
+              font.weight: Font.DemiBold
+            }
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: root.chord !== "" ? "ACTIVE CHORD" : "LAST CHORD"
+              color: "#626c71"
+              font.pixelSize: 6
+              font.letterSpacing: 0.8
+            }
+          }
+        }
+
+        Rectangle {
           width: 256
           height: 48
           radius: 5
@@ -161,7 +191,7 @@ Studio.DeviceFrame {
         id: keybed
         x: 19
         y: 111
-        width: 28 * 19
+        width: 36 * 19
         height: 134
 
         Row {
@@ -169,7 +199,7 @@ Studio.DeviceFrame {
           spacing: 0
 
           Repeater {
-            model: 28
+            model: 36
 
             Rectangle {
               required property int index
@@ -191,7 +221,7 @@ Studio.DeviceFrame {
               }
 
               Rectangle {
-                visible: root.hasBlackAfter(parent.midiNote) && index < 27
+                visible: root.hasBlackAfter(parent.midiNote) && index < 35
                 z: 2
                 x: parent.width - 6
                 y: 0

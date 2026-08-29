@@ -4,7 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = 2;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -37,6 +37,8 @@ pub struct MidiActivity {
     pub sustain: bool,
     pub event_count: u64,
     pub last_event: Option<MidiEvent>,
+    pub chord: Option<String>,
+    pub last_chord: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -66,7 +68,7 @@ pub enum ServerMessage {
     },
     MidiEvent {
         event: MidiEvent,
-        activity: MidiActivity,
+        activity: Box<MidiActivity>,
     },
     Error {
         message: String,
@@ -96,4 +98,84 @@ pub fn socket_path() -> PathBuf {
 
     let user = env::var("USER").unwrap_or_else(|_| "unknown".to_string());
     env::temp_dir().join(format!("studio-control-{user}.sock"))
+}
+
+pub fn detect_chord(notes: &[u8]) -> Option<String> {
+    const PATTERNS: &[(&str, &[u8])] = &[
+        ("maj9", &[0, 2, 4, 7, 11]),
+        ("9", &[0, 2, 4, 7, 10]),
+        ("m9", &[0, 2, 3, 7, 10]),
+        ("add9", &[0, 2, 4, 7]),
+        ("m(add9)", &[0, 2, 3, 7]),
+        ("6", &[0, 4, 7, 9]),
+        ("m6", &[0, 3, 7, 9]),
+        ("maj7", &[0, 4, 7, 11]),
+        ("7", &[0, 4, 7, 10]),
+        ("m7", &[0, 3, 7, 10]),
+        ("m(maj7)", &[0, 3, 7, 11]),
+        ("dim7", &[0, 3, 6, 9]),
+        ("m7♭5", &[0, 3, 6, 10]),
+        ("", &[0, 4, 7]),
+        ("m", &[0, 3, 7]),
+        ("dim", &[0, 3, 6]),
+        ("aug", &[0, 4, 8]),
+        ("sus2", &[0, 2, 7]),
+        ("sus4", &[0, 5, 7]),
+        ("5", &[0, 7]),
+    ];
+    const NAMES: [&str; 12] = [
+        "C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B",
+    ];
+
+    let bass = notes.iter().min().copied()? % 12;
+    let mut pitch_classes = notes.iter().map(|note| note % 12).collect::<Vec<_>>();
+    pitch_classes.sort_unstable();
+    pitch_classes.dedup();
+    if pitch_classes.len() < 2 {
+        return None;
+    }
+
+    let mut roots = vec![bass];
+    roots.extend((0..12).filter(|root| *root != bass));
+
+    for root in roots {
+        let mut intervals = pitch_classes
+            .iter()
+            .map(|pitch| (pitch + 12 - root) % 12)
+            .collect::<Vec<_>>();
+        intervals.sort_unstable();
+
+        if let Some((suffix, _)) = PATTERNS
+            .iter()
+            .find(|(_, pattern)| intervals.as_slice() == *pattern)
+        {
+            let mut chord = format!("{}{}", NAMES[root as usize], suffix);
+            if bass != root {
+                chord.push('/');
+                chord.push_str(NAMES[bass as usize]);
+            }
+            return Some(chord);
+        }
+    }
+
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::detect_chord;
+
+    #[test]
+    fn detects_triads_sevenths_and_inversions() {
+        assert_eq!(detect_chord(&[60, 64, 67]).as_deref(), Some("C"));
+        assert_eq!(detect_chord(&[60, 63, 67, 70]).as_deref(), Some("Cm7"));
+        assert_eq!(detect_chord(&[64, 67, 72]).as_deref(), Some("C/E"));
+        assert_eq!(detect_chord(&[57, 60, 64, 67]).as_deref(), Some("Am7"));
+    }
+
+    #[test]
+    fn ignores_single_notes_and_unknown_sets() {
+        assert_eq!(detect_chord(&[60]), None);
+        assert_eq!(detect_chord(&[60, 61, 66]), None);
+    }
 }

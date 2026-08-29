@@ -26,7 +26,8 @@ fi
 
 ln -sfn "$unit_source" "$unit_target"
 systemctl --user daemon-reload
-systemctl --user enable --now studio-control.service
+systemctl --user enable studio-control.service
+systemctl --user restart studio-control.service
 
 printf 'Studio Control observer installed and started.\n'
 printf 'Inspect it with: studioctl status\n'

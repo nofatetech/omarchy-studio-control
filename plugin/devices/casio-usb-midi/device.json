@@ -17,7 +17,9 @@
   "capabilities": [
     "midi.input",
     "midi.output",
+    "keyboard.keys.61",
     "keyboard.velocity",
-    "pedal.sustain"
+    "pedal.sustain",
+    "analysis.chord"
   ]
 }

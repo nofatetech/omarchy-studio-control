@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.nofatetech.studio-control",
   "name": "Studio Control",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "nofatetech",
   "license": "MIT",
   "description": "A modular hardware surface for studio devices in the Omarchy bar.",

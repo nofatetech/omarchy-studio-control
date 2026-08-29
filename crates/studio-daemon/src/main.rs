@@ -12,7 +12,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use studio_core::{
     AccessMode, ClientCommand, DeviceState, MidiActivity, MidiEvent, PROTOCOL_VERSION,
-    ServerMessage, Snapshot, now_ms, socket_path,
+    ServerMessage, Snapshot, detect_chord, now_ms, socket_path,
 };
 
 #[derive(Clone, Copy)]
@@ -212,7 +212,13 @@ fn run_observer(
 
         if let Ok(incoming) = midi_rx.recv_timeout(Duration::from_millis(40)) {
             let (event, activity) = apply_midi_event(&state, incoming);
-            broadcast(&subscribers, &ServerMessage::MidiEvent { event, activity });
+            broadcast(
+                &subscribers,
+                &ServerMessage::MidiEvent {
+                    event,
+                    activity: Box::new(activity),
+                },
+            );
         }
     }
 }
@@ -342,6 +348,10 @@ fn apply_midi_event(
 
     device.activity.event_count += 1;
     device.activity.last_event = Some(event.clone());
+    device.activity.chord = detect_chord(&device.activity.active_notes);
+    if device.activity.chord.is_some() {
+        device.activity.last_chord = device.activity.chord.clone();
+    }
     (event, device.activity.clone())
 }
 
@@ -434,5 +444,32 @@ mod tests {
         assert_eq!(activity.active_notes, vec![60]);
         assert!(activity.sustain);
         assert_eq!(activity.event_count, 2);
+    }
+
+    #[test]
+    fn activity_tracks_current_and_last_chord() {
+        let state = Arc::new(Mutex::new(initial_snapshot()));
+        for note in [60, 64, 67] {
+            apply_midi_event(
+                &state,
+                IncomingMidi {
+                    device_id: "casio.usb-midi".to_string(),
+                    bytes: vec![0x90, note, 90],
+                },
+            );
+        }
+
+        apply_midi_event(
+            &state,
+            IncomingMidi {
+                device_id: "casio.usb-midi".to_string(),
+                bytes: vec![0x80, 60, 64],
+            },
+        );
+
+        let snapshot = state.lock().expect("state lock");
+        let activity = &snapshot.devices["casio.usb-midi"].activity;
+        assert_eq!(activity.chord, None);
+        assert_eq!(activity.last_chord.as_deref(), Some("C"));
     }
 }

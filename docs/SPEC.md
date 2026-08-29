@@ -164,12 +164,21 @@ to other clients, change PipeWire metadata, or open UMC audio capture streams.
 1. **Visual shell:** module discovery, live connectivity, realistic faces. ✓
 2. **Passive daemon and IPC:** cooperative MIDI observation, live UI activity,
    logging, and reconnect behaviour. ✓
-3. **Launchpad managed mode:** LED renderer, explicit release/control mode, and
+3. **Output Analyzer:** observe the real default PipeWire sink and publish
+   reduced meters, spectrum, waveform, and loudness frames.
+4. **REAPER observe adapter:** publish project, transport, record-arm, and
+   recording-safety state through the shared adapter contract.
+5. **Launchpad managed mode:** LED renderer, explicit release/control mode, and
    profiles.
-4. **UMC404HD:** default input/output, digital mute/volume, meters, recording.
-5. **Assignments:** bind Launchpad controls to daemon actions and reflect state
+6. **UMC404HD:** default input/output, digital mute/volume, meters, recording.
+7. **System EQ:** explicit managed PipeWire filter-chain/LV2 mode with
+   reversible routing.
+8. **Assignments:** bind Launchpad controls to daemon actions and reflect state
    on both the hardware LEDs and QML face.
-6. **Additional modules:** generic MIDI, Home Assistant, lighting, and DAWs.
+9. **Additional modules:** generic MIDI, Home Assistant, lighting, and DAWs.
+
+Cross-domain adapters and the normalized event envelope are specified in
+[`INTEGRATIONS.md`](INTEGRATIONS.md).
 
 ## Non-goals and hardware truth
 

@@ -30,7 +30,9 @@ The current daemon milestone observes MIDI input through cooperative ALSA
 sequencer subscriptions. Launchpad LED feedback, PipeWire controls, recording,
 and Home Assistant integration remain planned. See
 [the product and technical specification](docs/SPEC.md) for the module contract
-and roadmap.
+and roadmap, and [the integration architecture](docs/INTEGRATIONS.md) for the
+shared standards used by audio, REAPER, lighting, media, and smart-home
+adapters.
 
 ## Requirements
 
